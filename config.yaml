@@ -1,0 +1,17 @@
+---
+
+# 
+# SSL Vault configuration
+# 
+
+# Application name
+name: "My SSL Vault"
+
+# Database
+database:
+  name: "sslvault_db"
+  host: "localhost"
+  username: "sslvault_www"
+  password: "YZjDIegpmxq42GU9f7ScUjLLsEUKpsUK"
+
+...

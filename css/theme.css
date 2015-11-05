@@ -1,0 +1,545 @@
+html
+{
+	margin: 0px;
+	height: 100%;
+	padding: 0px;
+}
+body
+{
+	cursor: default;
+	background-color: #F0F0F0;
+	font-family: Verdana, sans-serif;
+	font-size: 13px;
+	margin: 0px;
+	height: 100%;
+	padding: 0px;
+}
+input,
+textarea,
+button,
+select
+{
+	font-family: Verdana, sans-serif;
+	font-size: 1em;
+}
+a
+{
+	color: #915333;
+	text-decoration: underline;
+}
+a:hover
+{
+	color: #B6321E;
+	text-decoration: none;
+}
+a[disabled]
+{
+	pointer-events: none;
+}
+
+
+/**
+ * Common styles
+ */
+.text-right
+{
+	text-align: right;
+}
+.text-center
+{
+	text-align: center;
+}
+.text-muted
+{
+	color: #777777;
+}
+
+
+/**
+ * Login page
+ */
+div.login-frame
+{
+	display: block;
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	bottom: 0px;
+	right: 0px;
+	background-color: rgba(0,0,0,0.5);
+}
+div.login-frame div.login-box
+{
+	border-radius: 4px;
+	background-color: #ffffff;
+	width: 400px;
+	box-shadow: rgba(0,0,0,0.3) 0px 0px 12px;
+	padding: 30px;
+	box-sizing: border-box;
+	margin: 60px auto;
+}
+div.login-frame div.login-box div.field
+{
+	margin: 7px 0px;
+}
+div.login-frame div.login-box div.field input
+{
+	padding: 7px 15px;
+	border: 1px solid #cccccc; 
+	border-radius: 4px;
+	width: 100%;
+	box-sizing: border-box;
+	outline: none;
+}
+
+
+/**
+ * Default page theme
+ */
+nav.page
+{
+	position: fixed;
+	top: 0px;
+	bottom: 0px;
+	left: 0px;
+	width: 250px;
+	padding: 0px;
+	margin: 0px;
+	background-color: #1c0a07;
+}
+nav.page header
+{
+	background-color: #B6321E;
+	color: #ffffff;
+	padding: 12px 15px;
+	line-height: 2em;
+}
+nav.page header div.userpic
+{
+	background-repeat: no-repeat;
+	background-position: center center;
+	background-size: 100% auto;
+	width: 48px;
+	height: 48px;
+	float: left;
+	display: block;
+	padding: 0px;
+	margin: 2px 16px 0px 0px;
+	border-radius: 10px;
+}
+nav.page header h1
+{
+	margin: 0px;
+	padding: 0px;
+	font-size: 1.2em;
+}
+nav.page header h2
+{
+	margin: 0px;
+	font-size: 1em;
+	color: #e0e0e0;
+}
+nav.page ul
+{
+	display: block;
+	overflow: auto;
+	margin: 10px 0px;
+	padding: 0px;
+	list-style: none;
+}
+nav.page ul.admin
+{
+	display: block;
+	background: linear-gradient(rgba(28,10,7,0) 0px,rgba(28,10,7,1) 15px,rgba(28,10,7,1));
+	position: absolute;
+	padding: 20px 0px 0px 0px;
+	margin: 10px 0px;
+	bottom: 0px;
+	left: 0px;
+	width: 100%;
+}
+nav.page ul li
+{
+	list-style: none;
+	padding: 0px;
+	margin: 0px;
+}
+nav.page ul li a
+{
+	display: block;
+	color: #afafaf;
+	text-decoration: none;
+	padding: 7px 24px;
+	margin: 0px;
+}
+nav.page ul li a:hover
+{
+	background-color: rgba(255,255,255,0.1);
+}
+div.page-container
+{
+	position: absolute;
+	left: 250px;
+	right: 0px;
+	bottom: 0px;
+	top: 0px;
+	overflow: auto;
+	padding: 30px 60px;
+	box-shadow: rgba(0,0,0,0.8) 0px 0px 3px;
+}
+
+
+/**
+ * Common styles in .page-container
+ */
+div.page-container h1.title
+{
+	font-weight: 300;
+	color: #777777;
+	font-size: 1.7em;
+	margin: 0px 0px 15px 0px;
+	padding: 0px;
+}
+div.page-container h2.title
+{
+	color: #333333;
+	font-size: 1.2em;
+	margin: 10px 0px;
+	padding: 0px;
+}
+div.page-container div.card
+{
+	background-color: #ffffff;
+	box-shadow: rgba(0,0,0,0.1) 0px 2px 2px;
+	border-radius: 2px;
+	padding: 15px 30px;
+}
+div.page-container div.columns
+{
+	display: table;
+	width: 100%;
+	border-spacing: 20px;
+}
+div.page-container div.columns.center
+{
+	width: auto;
+	margin: auto;
+}
+div.page-container div.columns div.card
+{
+	display: table-cell;
+	width: 150px;
+}
+
+
+/**
+ * Default table style
+ */
+table.default
+{
+	border-spacing: 1px;
+	border-collapse: separate;
+	margin: 10px auto;
+	width: 100%;
+	box-sizing: border-box;
+}
+table.default thead tr th
+{
+	background-color: #e0e0e0;
+	padding: 7px 15px;
+	font-weight: 300;
+	color: #777777;
+}
+table.default tbody tr td
+{
+	padding: 7px 15px;
+	background-color: #ffffff;
+}
+table.default tbody tr.hidden
+{
+	display: none;
+}
+table.default tbody tr:nth-child(odd) td
+{
+	background-color: #f5f5f5;
+}
+table.default tbody tr:hover td
+{
+	background-color: #efefef;
+}
+table.default tbody tr td.icon
+{
+	width: 16px;
+	padding: 7px;
+}
+table.default tbody tr td.button
+{
+	text-align: center;
+	white-space: nowrap; 
+	width: 1%;
+	padding: 4px 7px;
+}
+table.default.clickable tbody tr td
+{
+	cursor: pointer;
+}
+
+
+/**
+ * Button generic styles
+ */
+.btn
+{
+	display: inline-block;
+	white-space: nowrap;
+	border: 1px solid #afafaf;
+	background-color: #ffffff;
+	border-radius: 2px;
+	padding: 7px 12px;
+	color: #000000;
+	outline: none;
+	text-decoration: none;
+	cursor: pointer;
+}
+.btn span.carret
+{
+	color: #c0c0c0;
+}
+.btn:hover
+{
+	background-color: #f9f9f9;
+	color: #000000;
+}
+.btn:not([disabled]):hover span.carret
+{
+	color: #777777;
+}
+.btn:active,
+.btn.active
+{
+	box-shadow: rgba(0,0,0,0.2) 0px 0px 7px inset;
+}
+.btn:not([disabled]):active span.carret,
+.btn:not([disabled]).active span.carret
+{
+	color: #3366ff;
+}
+.btn.btn-condensed
+{
+	padding: 4px 12px;
+}
+.btn.btn-success
+{
+	border-color: #607848;
+	background-color: #789048;
+	color: #ffffff;
+	text-shadow: rgba(0,0,0,0.2) 1px 1px 0px;
+}
+.btn.btn-success:hover
+{
+	background-color: #90a861;
+	color: #ffffff;
+}
+.btn.btn-primary
+{
+	border-color: #054556;
+	background-color: #046D8B;
+	color: #FFFFFF;
+}
+.btn.btn-danger
+{
+	border-color: #a84437;
+	background-color: #C25848;
+	color: #ffffff;
+	text-shadow: rgba(0,0,0,0.2) 1px 1px 0px;
+}
+.btn.btn-danger:hover
+{
+	background-color: #d1695c;
+	color: #ffffff;
+}
+.btn.btn-disabled,
+.btn.btn-disabled:hover,
+.btn.btn-disabled:active,
+.btn.btn-disabled.active
+{
+	background-color: #f0f0f0;
+	border-color: #e0e0e0;
+	color: #777777;
+	box-shadow: none;
+}
+.btn[disabled]
+{
+	opacity: 0.7;
+	cursor: not-allowed !important;
+}
+
+
+/**
+ * Default input style
+ */
+input.default,
+select.default,
+textarea.default
+{
+	display: block;
+	background-color: #ffffff;
+	border: 1px solid #c0c0c0;
+	outline: none;
+	border-radius: 4px;
+	padding: 7px 15px;
+	width: 100%;
+	box-sizing: border-box;
+}
+div.input-group
+{
+	display: table;
+	margin: 1em 0px;
+}
+div.input-group div.label
+{
+	background-color: #f0f0f0;
+	padding: 4px 12px;
+	display: table-cell;
+	border: 1px solid #c0c0c0;
+}
+div.input-group input,
+div.input-group select
+{
+	display: table-cell;
+	width: auto;
+	border-radius: 0px;
+}
+div.input-group *
+{
+	border-left: none;
+}
+div.input-group *:first-child
+{
+	border-radius: 4px 0px 0px 4px;
+	border-left: 1px solid #c0c0c0;
+}
+div.input-group *:last-child
+{
+	border-radius: 0px 4px 4px 0px;
+}
+
+
+/**
+ * Alert box
+ */
+div.alert
+{
+	border-radius: 4px;
+	padding: 15px 20px;
+	margin: 10px 15px;
+	background-color: #DBE6EC;
+	border: 1px solid #A4BCC2;
+	color: #42656d;
+}
+div.alert.alert-danger
+{
+	border-color: #F7A398;
+	background-color: #F6C7B7;
+	color: #B42529;
+}
+div.alert.alert-warning
+{
+	border-color: #FFA927;
+	background-color: #fcd26f;
+	color: #c46805;
+}
+div.alert.alert-success
+{
+	border-color: #C4ED68;
+	background-color: #E2FF9E;
+	color: #576D1E;
+}
+
+
+/**
+ * Avatar in table
+ */
+table div.avatar
+{
+	width: 32px;
+	height: 32px;
+	border-radius: 10px;
+	background-repeat: no-repeat;
+	background-position: center center;
+	background-size: 100% auto;
+}
+
+
+/**
+ * Modal window
+ */
+div.modal-cache
+{
+	position: fixed;
+	top: 0px;
+	left: 0px;
+	right: 0px;
+	bottom: 0px;
+	z-index: 1000;
+	background-color: rgba(0,0,0,0.5);
+}
+div.modal-frame
+{
+	background-color: #ffffff;
+	box-shadow: rgba(0,0,0,0.5) 0px 4px 7px;
+	position: absolute;
+	top: 40px;
+	z-index: 1100;
+	opacity: 0;
+	border-radius: 3px;
+}
+div.modal-frame div.modal-content
+{
+	padding: 15px 30px;
+}
+
+
+/**
+ * Dropdown
+ */
+div.dropdown-template
+{
+	padding-top: 12px;
+	position: absolute;
+	display: none;
+	white-space: nowrap;
+}
+div.dropdown-template ul
+{
+	background-color: #ffffff;
+	border: 1px solid #c0c0c0;
+	border-radius: 4px;
+	list-style: none;
+	margin: 0px;
+	padding: 4px 0px;
+	box-shadow: rgba(0,0,0,0.2) 0px 5px 7px;
+}
+div.dropdown-template ul li
+{
+	list-style: none;
+	padding: 0px;
+	margin: 0px;
+}
+div.dropdown-template ul li.separator
+{
+	border-top: 1px solid #efefef;
+	margin: 4px 7px;
+}
+div.dropdown-template ul li a
+{
+	display: block;
+	text-decoration: none;
+	padding: 3px 12px;
+	color: #555555;
+}
+div.dropdown-template ul li a:hover
+{
+	background-color: #f0f0f0;
+	color: #111111;
+}
