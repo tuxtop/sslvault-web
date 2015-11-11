@@ -70,6 +70,35 @@ class Database
 
 
 	/**
+	 * Simple select record
+	 */
+	public function select($table=null, $fields=null, $where=null)
+	{
+
+		# Check vars
+		if (!$table or !$fields or preg_match('/^\s*where/', $where)) return null;
+		if ($where) $where = "WHERE ${where}";
+
+		# 
+		$request = "SELECT ${fields} FROM ${table} ${where};";
+		if ($query = $this->dbh->query($request))
+		{
+			$data = $query->fetch();
+			$query->closeCursor();
+			return $data;
+		}
+		else
+		{
+			error_log("Failed to execute query ($request): ".$this->log_error());
+		}
+
+		# 
+		return false;
+
+	}
+
+
+	/**
 	 * Insert record
 	 */
 	public function insert($table=null, $data=array(), $return=null)

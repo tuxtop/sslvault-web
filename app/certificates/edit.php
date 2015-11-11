@@ -56,6 +56,12 @@ if ($form = new PostData() and $form->_post)
 		 Certificate successfully ${actType}d!
 		</div>
 MSG;
+		if ($form->csr)
+		{
+			print <<<TMP
+			<script type="text/javascript">setTimeout(function(){ document.location.href = '/index.php/${path[0]}/orders/${path[2]}/edit/0'; }, 3000);</script>
+TMP;
+		}
 	}
 	else
 	{
@@ -125,6 +131,7 @@ $fields = array(
 print <<<CARD
 <div class="card">
  <h2 class="title">${title}</h2>
+ <p><a href="/index.php/${path[0]}">&laquo; Back to the list</a></p>
  ${help}
  <form method="post" action="${npath}">
 CARD;
@@ -139,7 +146,7 @@ foreach ($fields as $field=>$finfos)
 	print <<<FIELD
 	<div class="input-group">
 	 <div class="label">${finfos['label']}</div>
-	 <input type="text" name="${field}" value="${value}" class="default" ${xtra} />
+	 <input type="text" name="${field}" value="${value}" class="form-control" ${xtra} />
 	</div>
 	<p>${finfos['help']}</p>
 FIELD;
@@ -148,7 +155,7 @@ FIELD;
 
 # End of card
 print <<<CARD
-  <p><input type="checkbox" name="csr" /> Create a new Certificate Signing Request (CSR)</p>
+  <p class="checkbox-line"><input type="checkbox" name="csr" id="csr" /> <label for="csr">Create a new Certificate Signing Request (CSR)</label></p>
   <p class="text-center"><input type="submit" value="${submit}" class="btn btn-success" /></p>
  </form>
 </div>

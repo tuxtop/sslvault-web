@@ -29,14 +29,14 @@ class SSLCert
 	{
 
 		# Get database handler
-		global $dbh;
+		global $dbh, $conf;
 
 		# List of Certificate status
 		$this->_s = array(
 			'unknown' => array(
 				'code'	=> 'unknown',
 				'text'	=> 'No status',
-				'label'	=> 'muted'
+				'label'	=> 'default'
 			),
 			'valid' => array(
 				'code'	=> 'valid',
@@ -50,7 +50,7 @@ class SSLCert
 			),
 			'csr_creation' => array(
 				'code'	=> 'csr_creation',
-				'text'	=> 'CSR in creation',
+				'text'	=> 'CSR created (to send)',
 				'label'	=> 'primary'
 			),
 			'soon_expiration' => array(
@@ -63,19 +63,24 @@ class SSLCert
 				'text'	=> 'Order sent to CA',
 				'label'	=> 'primary'
 			),
+			'csr_canceled' => array(
+				'code'	=> 'csr_canceled',
+				'text'	=> 'Order canceled',
+				'label'	=> 'danger'
+			),
 			'ca_answer_ok' => array(
 				'code'	=> 'ca_answer_ok',
-				'text'	=> 'Answer received from CA: OK',
+				'text'	=> 'Order accepted',
 				'label'	=> 'primary'
 			),
 			'ca_answer_ko' => array(
 				'code'	=> 'ca_answer_ko',
-				'text'	=> 'Answer received from CA: Refused',
+				'text'	=> 'Order refused',
 				'label'	=> 'danger'
 			),
 			'ca_answer_pending' => array(
 				'code'	=> 'ca_answer_pending',
-				'text'	=> 'Answer received from CA: Action pending',
+				'text'	=> 'Action pending',
 				'label'	=> 'warning'
 			),
 		);
@@ -104,15 +109,75 @@ class SSLCert
 			$query->closeCursor();
 		}
 
-		# Load last known status for this certificate
-		if ($query = $dbh->query("SELECT h.new_status,h.creation FROM certificates_history AS h,certificates_orders AS o WHERE h.oid=o.oid AND o.cid='$cid' ORDER BY h.creation DESC LIMIT 1;"))
+		# Check if in order status
+		$request = <<<REQ
+		SELECT COUNT(*)
+		FROM certificates_orders AS o,(
+			SELECT oid,new_status AS status,row_number() OVER (PARTITION BY oid ORDER BY creation DESC) AS lineid
+			FROM certificates_history
+			WHERE new_status IS NOT NULL
+		) AS h
+		WHERE h.oid=o.oid 
+			AND o.cid=${cid}
+			AND h.status IN ('csr_creation','csr_sent','ca_answer_pending')
+			AND h.lineid=1
+REQ;
+		$is_in_order = 0;
+		if ($query = $dbh->query($request))
 		{
-			if (!$query->rowCount())
-			{
-				$this->certFields['status'] = $this->_s['unknown'];
-			}
+			list($is_in_order) = $query->fetch();
 			$query->closeCursor();
 		}
+		$this->certFields['order_processing'] = $is_in_order>0 ? true : false;
+
+		# Get last expiration date
+		$exp = null;
+		$request = <<<REQ
+		SELECT (o.creation+(o.duration||' days')::interval) AS expiration_date,certificate
+		FROM certificates_orders AS o,(
+			SELECT oid,new_status AS status,row_number() OVER (PARTITION BY oid ORDER BY creation DESC) AS lineid
+			FROM certificates_history
+			WHERE new_status IS NOT NULL
+		) AS h
+		WHERE h.oid=o.oid 
+			AND o.cid=${cid}
+			AND h.status='ca_answer_ok'
+			AND h.lineid=1
+REQ;
+		if ($query = $dbh->query($request))
+		{
+			list($exp, $certificate) = $query->fetch();
+			$this->certFields['certificate'] = $certificate;
+			$query->closeCursor();
+		}
+		else
+		{
+			error_log("Failed to get last expiration date: ".$dbh->log_error());
+		}
+		$this->certFields['expiration'] = $exp;
+
+		# Set status
+		$status = 'unknown';
+		if ($this->expiration)
+		{
+			$status = 'valid';
+			$a = new DateTime($this->expiration);
+			$b = new DateTime();
+			$diff = $b->diff($a);
+			if ($diff->days>$conf['impending_delay'])
+			{
+				$status = 'valid';
+			}
+			elseif ($diff->days>0 and $diff->days<$conf['impending_delay'])
+			{
+				$status = 'soon_expiration';
+			}
+			else
+			{
+				$status = 'expired';
+			}
+		}
+		$this->certFields['status'] = $this->_s[$status];
 
 	}
 

@@ -81,21 +81,39 @@ MSG;
 }
 
 
+# 
+$filter = isset($_GET['filter']) ? htmlentities(strip_tags($_GET['filter'])) : null;
+
+
 # Certificates filter
+$filters = array();
+foreach (explode(' ', 'valid impending_expiry pending_orders expired hidden') as $a) $filters[$a] = '';
+if ($filter) $filters[$filter] = 'btn-primary';
 print <<<FILTERS
 <p id="filters">
  Predefined filters:
- <span class="btn btn-disabled btn-condensed" data-filter="valid">Valid certificates</span>
- <span class="btn btn-disabled btn-condensed" data-filter="impeding_expiry">Impeding expiry</span>
- <span class="btn btn-disabled btn-condensed" data-filter="pending_orders">Pending orders</span>
- <span class="btn btn-disabled btn-condensed" data-filter="expired">Expired certificates</span>
- <span class="btn btn-disabled btn-condensed" data-filter="hidden">Hidden certificates</span>
+ <span class="btn btn-default btn-xs ${filters['valid']}" data-filter="valid">Valid certificates</span>
+ <span class="btn btn-default btn-xs ${filters['impending_expiry']}" data-filter="impending_expiry">Impeding expiry</span>
+ <span class="btn btn-default btn-xs ${filters['pending_orders']}" data-filter="pending_orders">Pending orders</span>
+ <span class="btn btn-default btn-xs ${filters['expired']}" data-filter="expired">Expired certificates</span>
+ <span class="btn btn-default btn-xs ${filters['hidden']}" data-filter="hidden">Hidden certificates</span>
 </p>
 FILTERS;
 
 
+# Prepare certificate list
+switch ($filter)
+{
+	case 'hidden':
+		$request = "SELECT cid,name,creation,hidden FROM certificates_catalog WHERE hidden = true ORDER BY name;";
+		break;
+	default:
+		$request = "SELECT cid,name,creation,hidden FROM certificates_catalog WHERE hidden = false ORDER BY name;";
+}
+
+
 # Load certificates
-if ($query = $dbh->query("SELECT cid,name,hidden,creation FROM certificates_catalog ORDER BY name;"))
+if ($query = $dbh->query($request))
 {
 	print <<<TABLE
 	<table class="default" id="cert-catalog">
@@ -111,7 +129,7 @@ if ($query = $dbh->query("SELECT cid,name,hidden,creation FROM certificates_cata
 TABLE;
 	if ($query->rowCount())
 	{
-		while (list($cid, $name, $hidden) = $query->fetch())
+		while (list($cid, $name, $creation, $hidden) = $query->fetch())
 		{
 			$c = new SSLCert($cid);
 			$status = "<span class=\"label label-".$c->status['label']."\">".$c->status['text']."</span>";
@@ -121,24 +139,29 @@ TABLE;
 				'change2visible' => $hidden ? '' : 'style="display:none;"',
 			);
 			$jsdata = str_replace('"', '&quot;', json_encode($jsdata));
-			$cl = array();
-			if ($hidden) $cl[]= 'hidden';
-			$cl = implode(' ', $cl);
+			$expiration = '--';
+			if ($c->expiration)
+			{
+				$expiration = new DateTime($c->expiration);
+				$expiration = $expiration->format($conf['date_format']);
+			}
+			if ($c->order_processing) $status.= ' <span class="label label-primary">Order processing</span>';
 			print <<<ROW
-			<tr class="${cl}">
+			<tr>
 			 <td>${name} <span class="text-muted">($c->cn)</span></td>
-			 <td>$c->expiration</td>
+			 <td>${expiration}</td>
 			 <td>${status}</td>
-			 <td class="button"><span data-role="dropdown" data-infos="${jsdata}" data-template="dropdown-cert" class="btn btn-default btn-condensed">Actions <span class="carret">&#9660;</span></span></td>
+			 <td class="button"><span data-role="dropdown" data-infos="${jsdata}" data-template="dropdown-cert" class="btn btn-default btn-sm">Actions <span class="carret">&#9660;</span></span></td>
 			</tr>
 ROW;
 		}
 	}
 	else
 	{
+		$txt = $filter ? ' with this filter' : '';
 		print <<<ROW
 		<tr>
-		 <td colspan="3" class="text-center"><em>No certificate in catalog...</em></td>
+		 <td colspan="4" class="text-center"><em>No certificate in catalog${txt}...</em></td>
 		</tr>
 ROW;
 	}
@@ -162,7 +185,7 @@ print <<<DIV
   <li><a href="/index.php/${path[0]}/orders/{:cid}">View orders</a></li>
   <li class="separator"></li>
   <li {:change2hidden}><a href="javascript:hide_certificate({:cid});">Hide certificate</a></li>
-  <li {:change2visible}><a href="javascript:show_certificate({:cid});">Set visible certificate</a></li>
+  <li {:change2visible}><a href="javascript:show_certificate({:cid});">Set certificate as visible</a></li>
   <li><a href="javascript:delete_certificate({:cid});">Delete certificate</a></li>
  </ul>
 </div>
@@ -202,31 +225,10 @@ print <<<DIV
 
 	}
 
-	var curr = null;
 	$('#filters .btn').on('click',function(){
-		var item = $(this).data('filter');
-		if (!curr || curr!=item)
-		{
-			if (curr) $('#filters .btn[data-filter="'+curr+'"]').addClass('btn-disabled').removeClass('btn-primary');
-			$('#filters .btn[data-filter="'+item+'"]').addClass('btn-primary').removeClass('btn-disabled');
-			curr = item;
-		}
-		else if (curr)
-		{
-			$('#filters .btn[data-filter="'+curr+'"]').addClass('btn-disabled').removeClass('btn-primary');
-			curr = null;
-		}
-		switch (curr)
-		{
-			case 'hidden':
-				$('#cert-catalog tbody tr').hide();
-				$('#cert-catalog tbody tr.hidden').show();
-				break;
-			default:
-				$('#cert-catalog tbody tr').show();
-				$('#cert-catalog tbody tr.hidden').hide();
-				break;
-		}
+		var url = '/index.php/${path[0]}';
+		if ($(this).data('filter')!='${filter}') url+= '?filter='+$(this).data('filter');
+		document.location.href = url;
 	});
 
 </script>

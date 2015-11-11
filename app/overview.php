@@ -14,7 +14,8 @@ print '<h1 class="title">Overview</h1>';
 if ($query = $dbh->query("SELECT cid FROM certificates_catalog WHERE hidden=false;"))
 {
 	$status = array(
-		'total' => array( 'code' => ':total', 'text' => 'Certificates in Catalog', 'label' => 'default', 'count' => 0 )
+		'total' => array( 'code' => ':total', 'text' => 'Certificates in Catalog', 'label' => 'default', 'count' => 0 ),
+		'orders' => array( 'text' => 'Orders processing', 'count' => 0 )
 	);
 	while (list($cid) = $query->fetch())
 	{
@@ -27,13 +28,15 @@ if ($query = $dbh->query("SELECT cid FROM certificates_catalog WHERE hidden=fals
 			$status[$tag] = $c->status;
 		}
 		$status[$tag]['count']++;
-		$status['total']['count']+= 1;
+		$status['total']['count']++;
+		if ($c->order_processing) $status['orders']['count']++;
 	}
 	print <<<DIV
 	<div class="columns center">
 DIV;
 	foreach ($status as $i)
 	{
+		if (!$i['count']) continue;
 		print <<<CARD
 		<div class="card text-center">
 		 <h1>${i['count']}</h1>

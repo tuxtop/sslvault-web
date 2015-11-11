@@ -11,6 +11,7 @@ class PostData
 	 */
 	public $_post;		# Boolean: true if POST method
 	private $data;		# Contains _POST array values
+	private $files;		# Contains _FILES array values
 
 
 	/**
@@ -26,6 +27,7 @@ class PostData
 
 		# Save _POST array
 		$this->data = $_POST;
+		$this->files = $_FILES;
 
 		# Return ok
 		return $this;
@@ -64,6 +66,25 @@ class PostData
 	public function all_fields()
 	{
 		return array_keys($this->data);
+	}
+
+
+	/**
+	 * Save file from POST data
+	 */
+	public function _savefile($inpname, $destfile)
+	{
+		if (isset($this->files[$inpname]))
+		{
+			$f = $this->files[$inpname];
+			$tmpname = $f['tmp_name'];
+			if (!file_exists($tmpname)) return false;
+			return move_uploaded_file($tmpname, $destfile);
+		}
+		else
+		{
+			return false;
+		}
 	}
 
 }

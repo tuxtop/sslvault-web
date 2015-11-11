@@ -19,4 +19,17 @@ print <<<MSG
 </div>
 MSG;
 
+
+# Author & special thanks
+print <<<MSG
+<div class="card">
+ <h2 class="title">Author &amp; Special Thanks</h2>
+ <p>Author: Julien DUMONT &lt;<a href="mailto:sslvault@dumont.rocks">sslvault@dumont.rocks</a>&gt;</p>
+ <blockquote class="thanks">
+  I want to thanks the person who is at the origin of this tool: Florent [K-Ribou] LERAT <span>(aka &laquo;Grandpa&raquo;)</span>.<br />
+  <small>Julien</small>
+ </blockquote>
+</div>
+MSG;
+
 ?>

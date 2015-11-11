@@ -7,7 +7,7 @@
 
 # Get certificate to manage
 $cid = isset($path[2]) and preg_match('/^\d+$/', $path[2]) ? intval($path[2]) : null;
-$action = isset($path[3]) ? $path[3] : 'details';
+$action = isset($path[3]) ? $path[3] : 'list';
 if ($cid===null) $action = ':unknown';
 
 
