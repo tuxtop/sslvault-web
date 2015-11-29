@@ -38,19 +38,7 @@ if (!isset($conf['impending_delay'])) $conf['impending_delay'] = 30;
 # Init database handler
 $db = $conf['database'];
 $dbh = new Database("pgsql:dbname=${db['name']};host=${db['host']};port=5432;sslmode=require", $db['username'], $db['password']);
-
-
-# Init publicKey for self-signed
-$tmp = $dbh->query("SELECT COUNT(*) FROM sslkeys_catalog WHERE name=':selfsigned';");
-list($is_self_pkey) = $tmp->fetch();
-if (!$is_self_pkey)
-{
-	$res = openssl_pkey_new();
-	$tmp = openssl_pkey_get_details($res);
-	$pubKey = $tmp['key'];
-	openssl_pkey_export($res, $privKey);
-	$dbh->query("INSERT INTO sslkeys_catalog (name,private,public) VALUES (':selfsigned','${privKey}','${pubKey}')") or die("Failed to initialize self-signed keys! (".$dbh->errorInfo()[2].")");
-}
+if (defined('AJAX_MODE')) return;
 
 
 # Manage page to display
@@ -72,6 +60,7 @@ print <<<HTML
  <head>
   <title>${conf['name']}</title>
   <link href="/css/bootstrap/css/bootstrap.min.css" rel="STYLESHEET" type="text/css" />
+  <link href="/css/font-awesome/css/font-awesome.min.css" rel="STYLESHEET" type="text/css" />
   <link href="/css/theme.css" rel="STYLESHEET" type="text/css" />
   <script type="text/javascript" src="/js/jquery-2.1.4.min.js"></script>
   <script type="text/javascript" src="/js/sslvault.js"></script>
@@ -97,7 +86,7 @@ if (isset($_SESSION['auth']))
 	 <ul class="menu">
 	  <li><a href="/">Overview</a></li>
 	  <li><a href="/index.php/certificates">Certificates</a></li>
-	  <li><a href="/index.php/sslkeys">SSL Keys</a></li>
+	  <li><a href="/index.php/keypairs">Keypairs</a></li>
 	  <li><a href="/index.php/about">About</a></li>
 	 </ul>
 	 <ul class="admin">
