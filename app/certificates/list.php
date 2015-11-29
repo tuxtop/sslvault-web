@@ -9,8 +9,13 @@
 print <<<DIV
 <div class="card">
  <h2 class="title">SSL Certificates in your Catalog</h2>
- <p>On this page you will find all SLL Certificates referenced.</p>
- <p><a class="btn btn-default" href="/index.php/${path[0]}/edit/0">Create new Certificate</a></p>
+ <p>On this page you will find all your SSL Certificates referenced.</p>
+ <p>
+  <div class="input-group">
+   <a class="btn btn-default" href="/index.php/${path[0]}/0/edit">Create new Certificate</a>
+   <a class="btn btn-default" href="/index.php/${path[0]}/import">Import Certificate</a>
+  </div>
+ </p>
 DIV;
 
 
@@ -105,10 +110,65 @@ FILTERS;
 switch ($filter)
 {
 	case 'hidden':
-		$request = "SELECT cid,name,creation,hidden FROM certificates_catalog WHERE hidden = true ORDER BY name;";
+		$request = "SELECT cid,name,creation,hidden,tags FROM certificates_catalog WHERE hidden = true ORDER BY name;";
+		break;
+	case 'pending_orders':
+		$request = <<<REQ
+		SELECT c.cid,c.name,c.creation,c.hidden,c.tags
+		FROM certificates_catalog AS c,
+			certificates_orders AS o
+		WHERE c.cid=o.cid
+			AND o.status IN ('csr_creation','ca_answer_pending','csr_sent')
+			AND c.hidden = false
+REQ;
+		break;
+	case 'impending_expiry':
+		$request = <<<REQ
+		SELECT c.cid,c.name,c.creation,c.hidden,c.tags
+		FROM certificates_catalog AS c,
+			(
+				SELECT cid,expiration,row_number() OVER (PARTITION BY cid ORDER BY creation DESC) AS rowid
+				FROM certificates_orders
+				WHERE status='ca_answer_ok'
+			) AS o
+		WHERE c.cid=o.cid
+			AND o.rowid=1
+			AND (o.expiration-(${conf['impending_delay']}||' days')::interval)<'now'::timestamp
+			AND c.hidden = false
+REQ;
+		break;
+	case 'expired':
+		$request = <<<REQ
+		SELECT c.cid,c.name,c.creation,c.hidden,c.tags
+		FROM certificates_catalog AS c,
+			(
+				SELECT cid,expiration,row_number() OVER (PARTITION BY cid ORDER BY creation DESC) AS rowid
+				FROM certificates_orders
+				WHERE status='ca_answer_ok'
+			) AS o
+		WHERE c.cid=o.cid
+			AND o.rowid=1
+			AND o.expiration<'now'::timestamp
+			AND c.hidden = false
+REQ;
+		break;
+	case 'valid':
+		$request = <<<REQ
+		SELECT c.cid,c.name,c.creation,c.hidden,c.tags
+		FROM certificates_catalog AS c,
+			(
+				SELECT cid,expiration,row_number() OVER (PARTITION BY cid ORDER BY creation DESC) AS rowid
+				FROM certificates_orders
+				WHERE status='ca_answer_ok'
+			) AS o
+		WHERE c.cid=o.cid
+			AND o.rowid=1
+			AND o.expiration>='now'::timestamp
+			AND c.hidden = false
+REQ;
 		break;
 	default:
-		$request = "SELECT cid,name,creation,hidden FROM certificates_catalog WHERE hidden = false ORDER BY name;";
+		$request = "SELECT cid,name,creation,hidden,tags FROM certificates_catalog WHERE hidden = false ORDER BY name;";
 }
 
 
@@ -120,6 +180,7 @@ if ($query = $dbh->query($request))
 	 <thead>
 	  <tr>
 	   <th>Certificate</th>
+	   <th>Tags</th>
 	   <th>Expiration</th>
 	   <th>Status</th>
 	   <th>&nbsp;</th>
@@ -129,7 +190,7 @@ if ($query = $dbh->query($request))
 TABLE;
 	if ($query->rowCount())
 	{
-		while (list($cid, $name, $creation, $hidden) = $query->fetch())
+		while (list($cid, $name, $creation, $hidden, $tags) = $query->fetch())
 		{
 			$c = new SSLCert($cid);
 			$status = "<span class=\"label label-".$c->status['label']."\">".$c->status['text']."</span>";
@@ -146,9 +207,13 @@ TABLE;
 				$expiration = $expiration->format($conf['date_format']);
 			}
 			if ($c->order_processing) $status.= ' <span class="label label-primary">Order processing</span>';
+			$a = explode(',', $tags);
+			$tags = '';
+			foreach ($a as $item) $tags.= '<span class="label label-tag">'.$item.'</span> ';
 			print <<<ROW
 			<tr>
 			 <td>${name} <span class="text-muted">($c->cn)</span></td>
+			 <td>${tags}</td>
 			 <td>${expiration}</td>
 			 <td>${status}</td>
 			 <td class="button"><span data-role="dropdown" data-infos="${jsdata}" data-template="dropdown-cert" class="btn btn-default btn-sm">Actions <span class="carret">&#9660;</span></span></td>
@@ -171,6 +236,15 @@ ROW;
 	</table>
 TABLE;
 }
+else
+{
+	$dbh->log_error();
+	print <<<MSG
+	<div class="alert alert-danger">
+	 Failed to load certificates with that filter...
+	</div>
+MSG;
+}
 
 
 # End of card
@@ -179,10 +253,10 @@ print <<<DIV
 
 <div class="dropdown-template" id="dropdown-cert">
  <ul>
-  <li><a href="/index.php/${path[0]}/edit/{:cid}">Edit Certificate</a></li>
+  <li><a href="/index.php/${path[0]}/{:cid}/edit">Edit Certificate</a></li>
   <li class="separator"></li>
-  <li><a href="/index.php/${path[0]}/orders/{:cid}/edit/0">New CSR</a></li>
-  <li><a href="/index.php/${path[0]}/orders/{:cid}">View orders</a></li>
+  <li><a href="/index.php/${path[0]}/{:cid}/csr/list">View CSRs list</a></li>
+  <li><a href="/index.php/${path[0]}/{:cid}/orders/list">View orders list</a></li>
   <li class="separator"></li>
   <li {:change2hidden}><a href="javascript:hide_certificate({:cid});">Hide certificate</a></li>
   <li {:change2visible}><a href="javascript:show_certificate({:cid});">Set certificate as visible</a></li>
