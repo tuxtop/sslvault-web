@@ -10,9 +10,9 @@ $c = new stdClass();
 $title = 'New certificate';
 $submit = 'Create certificate';
 $help = '';
-if (isset($path[2]) and preg_match('/^\d+$/', $path[2]) and $path[2]>2)
+if ($cid!==null)
 {
-	$c = new SSLCert($path[2]);
+	$c = new SSLCert($cid);
 }
 
 
@@ -28,11 +28,12 @@ if ($form = new PostData() and $form->_post)
 		if ($key=='csr') continue;
 		$f[$key] = $form->$key;
 	}
+	if (!isset($k['name']) or !$k['name']) $k['name'] = $k['cn'];
 
 	# Prepare request
 	if ($c->name)
 	{
-		$res = $dbh->update('certificates_catalog', $f, "cid=${path[2]}");
+		$res = $dbh->update('certificates_catalog', $f, "cid=${cid}");
 		$actType = 'update';
 	}
 	else
@@ -46,11 +47,10 @@ if ($form = new PostData() and $form->_post)
 	{
 		if ($actType=='create')
 		{
-			$path[2] = $res;
-			$npath = '/index.php/'.implode('/', $path);
+			$cid = $res;
 			$c = new SSLCert($res);
 		}
-		$c = new SSLCert($path[2]);
+		$c = new SSLCert($cid);
 		print <<<MSG
 		<div class="alert alert-success">
 		 Certificate successfully ${actType}d!
@@ -59,7 +59,7 @@ MSG;
 		if ($form->csr)
 		{
 			print <<<TMP
-			<script type="text/javascript">setTimeout(function(){ document.location.href = '/index.php/${path[0]}/orders/${path[2]}/edit/0'; }, 3000);</script>
+			<script type="text/javascript">setTimeout(function(){ document.location.href = '/index.php/${path[0]}/${cid}/csr/0/edit'; }, 3000);</script>
 TMP;
 		}
 	}
@@ -80,7 +80,7 @@ MSG;
 # 
 if ($c->name)
 {
-	$title = 'Edit certificate #'.$path[2];
+	$title = 'Edit certificate #'.$cid;
 	$submit = 'Save modifications';
 	$help = '<p><strong>WARNING:</strong> On editing this certificate, you will change for future emited certificates, the current and past certificates emited will still be the same.</p>';
 }
@@ -96,31 +96,37 @@ $fields = array(
 	'cn' => array(
 		'label' => 'Common Name',
 		'field' => 'CN=',
+		'required' => true,
 		'help' => 'FQDN you want to secure (e.g.: *.mydomain.com)'
 	),
 	'o' => array(
 		'label' => 'Business name (or Organization)',
 		'field' => 'O=',
+		'required' => true,
 		'help' => 'Usually the legal incorporated name of a company and should include any suffixes such as Ltd., Inc., or Corp.'
 	),
 	'ou' => array(
 		'label' => 'Department name (or Organizational Unit)',
 		'field' => 'OU=',
+		'required' => true,
 		'help' => 'e.g.: HR, Finance, IT, ...'
 	),
 	'l' => array(
 		'label' => 'Location',
 		'field' => 'L=',
+		'required' => true,
 		'help' => 'e.g.: London, Lille, New York, ...'
 	),
 	's' => array(
 		'label' => 'State',
 		'field' => 'S=',
+		'required' => true,
 		'help' => 'e.g.: New Jersey, Nord, Sussex, New Yorkshire, ...'
 	),
 	'c' => array(
 		'label' => 'Country',
 		'field' => 'C=',
+		'required' => true,
 		'help' => 'Two-letter country code, such as FR, DE, US',
 		'maxlength' => 2
 	),
@@ -128,6 +134,7 @@ $fields = array(
 
 
 # Start of card
+$npath = "/index.php/${path[0]}/${cid}/edit";
 print <<<CARD
 <div class="card">
  <h2 class="title">${title}</h2>
@@ -141,7 +148,8 @@ CARD;
 foreach ($fields as $field=>$finfos)
 {
 	$xtra = '';
-	if (isset($finfos['maxlength'])) $xtra.= "maxlength=\"${finfos['maxlength']}\"";
+	if (isset($finfos['maxlength'])) $xtra.= "maxlength=\"${finfos['maxlength']}\" ";
+	if (isset($finfos['required'])) $xtra.= "required=\"required\" ";
 	$value = $c->$field;
 	print <<<FIELD
 	<div class="input-group">
@@ -155,6 +163,12 @@ FIELD;
 
 # End of card
 print <<<CARD
+
+  <div class="input-group">
+   <div class="label">Tags</div>
+   <input type="text" name="tags" value="$c->tags" class="form-control" data-role="tags" data-autocomplete="/ajax/tags.php" />
+  </div>
+
   <p class="checkbox-line"><input type="checkbox" name="csr" id="csr" /> <label for="csr">Create a new Certificate Signing Request (CSR)</label></p>
   <p class="text-center"><input type="submit" value="${submit}" class="btn btn-success" /></p>
  </form>
