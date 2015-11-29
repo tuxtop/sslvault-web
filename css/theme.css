@@ -39,13 +39,83 @@ a[disabled]
 
 
 /**
- * Overwritte bootstrap styles
+ * Overwritte/extend bootstrap styles
  */
 .label
 {
 	font-size: 1em;
 	font-weight: normal;
 	padding: 4px 7px;
+}
+.label.label-tag
+{
+	background: #F78233;
+}
+
+
+/**
+ * Tags input field
+ */
+div.tags-input
+{
+	cursor: text;
+	height: auto !important;
+}
+div.tags-input input
+{
+	border: none;
+	outline: none;
+	border: none;
+	line-height: auto !important;
+	height: 100%;
+	vertical-align: text-top;
+	padding: 0px;
+	margin: 0px 0px 0px 7px;
+}
+div.tags-input span.tag
+{
+	display: inline-block;
+	border: 1px solid #D74900;
+	margin: 0px 4px 2px 0px;
+	padding: 2px 7px;
+	border-radius: 3px;
+	box-shadow: rgba(255,255,255,0.3) 0px 0px 2px inset,
+		rgba(0,0,0,0.5) 0px 0px 3px;
+	/*background: #F78233 linear-gradient(#F78233,#EF5703);*/
+	color: #541d02;
+	background: #F78233;
+	font-size: 0.9em;
+	cursor: default;
+}
+div.tags-input span.tag span[data-role=close]:before
+{
+	cursor: pointer;
+	font-size: 0.9em;
+	display: inline-block;
+	padding: 2px 1px 2px 5px;
+}
+div.tags-propals
+{
+	z-index: 100;
+	margin-top: 5px;
+	margin-left: 5px;
+}
+div.tags-propals ul
+{
+	box-shadow: rgba(0,0,0,0.3) 0px 1px 7px;
+	background-color: #ffffff;
+	min-width: 150px; 
+	border: 1px solid #cccccc;
+	border-radius: 4px;
+	margin: 4px 0px;
+	list-style: none;
+	padding: 0px;
+}
+div.tags-propals ul li
+{
+	list-style: none;
+	padding: 3px 7px;
+	margin: 0px;
 }
 
 
@@ -322,12 +392,14 @@ div.input-group
 	display: table;
 	margin: 1em 0px;
 	width: auto !important;
+	box-sizing: border-box;
 	vertical-align: top;
 }
 div.input-group.input-group-line
 {
 	display: inline-table;
 	vertical-align: top;
+	margin-right: 15px;
 }
 div.input-group.group-left
 {
@@ -346,14 +418,18 @@ div.input-group div.label
 	border: 1px solid #c0c0c0;
 	color: #333333;
 	vertical-align: middle;
+	width: 1%;
+	white-space: nowrap;
 }
 div.input-group input,
 div.input-group select
 {
 	display: table-cell;
 	width: auto !important;
+	max-width: 400px;
 	border-radius: 0px;
 	vertical-align: middle;
+	z-index: 0 !important;
 }
 div.input-group > *
 {
@@ -410,7 +486,6 @@ div.wmodal-cache
 	left: 0px;
 	right: 0px;
 	bottom: 0px;
-	z-index: 1000;
 	background-color: rgba(0,0,0,0.5);
 }
 div.wmodal-frame
@@ -419,7 +494,6 @@ div.wmodal-frame
 	box-shadow: rgba(0,0,0,0.5) 0px 4px 7px;
 	position: absolute;
 	top: 40px;
-	z-index: 1100;
 	opacity: 0;
 	border-radius: 3px;
 }
