@@ -11,8 +11,11 @@ print '<h1 class="title">SSL Certificates</h1>';
 
 
 # Manage subpage
-if (!isset($path[1])) $path[1] = 'list';
-$file = $_SERVER['DOCUMENT_ROOT']."/app/${path[0]}/${path[1]}.php";
+$cid = (isset($path[1]) and preg_match('/^\d+$/', $path[1])) ? intval($path[1]) : null;
+if ($path[1]=='import') $path[2] = 'import';
+elseif ($cid===null) $path[2] = 'list';
+elseif ($cid!==null and !isset($path[2])) $path[2] = 'orders';
+$file = $_SERVER['DOCUMENT_ROOT']."/app/${path[0]}/${path[2]}.php";
 if (!file_exists($file))
 {
 	header('Status: 404 Not Found', true, 404);
