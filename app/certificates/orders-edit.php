@@ -6,8 +6,7 @@
 
 
 # Get certificate and order to manage
-$cid = intval($path[2]);
-$oid = intval($path[4]);
+$oid = intval($path[3]);
 $cert = new SSLCert($cid);
 
 
@@ -16,47 +15,19 @@ $form = new PostData();
 if ($form->_post)
 {
 
-	# 
-	if ($form->csr)
+	# Insert order
+	if ($form->order)
 	{
-
-		# Load private key
-		list($priv) = $dbh->select('sslkeys_catalog', 'private', "name = ':selfsigned'");
-		$k = openssl_pkey_get_private($priv) or die('pkey: '.openssl_error_string());
-
-		# Prepare distinguish name
-		$a = array(
-			'countryName' => 'c',
-			'stateOrProvinceName' => 's',
-			'localityName' => 'l',
-			'organizationName' => 'o',
-			'organizationalUnitName' => 'ou',
-			'commonName' => 'cn',
-		);
-		$dn = array();
-		foreach ($a as $name=>$idx)
-		{
-			$dn[$name] = $cert->$idx;
-		}
-		if ($form->email) $dn['emailAddress'] = $form->email;
-
-		# Create CSR
-		$csr = openssl_csr_new($dn, $k, array(
-			'digest_alg' => 'md5',
-			'private_key_bits' => 2048,
-			'private_key_type' => OPENSSL_KEYTYPE_RSA
-		)) or die('csr: '.openssl_error_string());
-		openssl_csr_export($csr, $out);
 
 		# Insert new order
 		$data = array(
 			'cid' => $cid,
 			'author_uid' => $_SESSION['auth']['uid'],
 			'status' => 'csr_creation',
-			'csr' => $out,
+			'csid' => $form->csid,
 			'email' => $form->email,
-			'duration' => $form->duration,
-			'provider_name' => $form->provider_name
+			'provider_name' => $form->provider_name,
+			'provider_oid' => $form->provider_oid
 		);
 		if ($oid = $dbh->insert('certificates_orders', $data, 'oid'))
 		{
@@ -66,7 +37,7 @@ if ($form->_post)
 				'oid' => $oid,
 				'new_status' => 'csr_creation',
 				'author_uid' => $_SESSION['auth']['uid'],
-				'action' => 'Certificate Signing Request created'
+				'action' => 'Order created'
 			));
 
 			# Print message
@@ -100,7 +71,54 @@ if ($oid)
 	$form = new PostData();
 	if ($form->_post)
 	{
-		if ($status = $form->status)
+		if ($certificate = $form->certificate)
+		{
+
+			# Validate certificate (we need it to determine expiration)
+			if ($data = openssl_x509_parse($form->certificate))
+			{
+
+				#
+				if ($dbh->update('certificates_orders', array(
+					'status' => 'ca_answer_ok',
+					'expiration' => date('Y-m-d H:i:s',$data['validTo']),
+					'certificate' => $certificate,
+					'intermediate' => $form->intermediate
+				), "oid=${oid}"))
+				{
+					$dbh->insert('certificates_history', array(
+						'oid' => $oid,
+						'action' => 'Certificate updated',
+						'author_uid' => $_SESSION['auth']['uid']
+					)) or error_log("Failed to insert comment: ".$dbh->log_error());
+					print <<<MSG
+					<div class="alert alert-success">
+					 Certificate successfully updated!
+					</div>
+MSG;
+				}
+				else
+				{
+					$dbh->log_error();
+					print <<<MSG
+					<div class="alert alert-danger">
+					 Failed to update order with new certificate!
+					</div>
+MSG;
+				}
+
+			}
+			else
+			{
+				print <<<MSG
+				<div class="alert alert-danger">
+				 Invalid signed x509 certificate!
+				</div>
+MSG;
+			}
+
+		}
+		elseif ($status = $form->status)
 		{
 			list($prevStatus) = $dbh->select('certificates_orders', 'status', "oid = ${oid}");
 			$dbh->update('certificates_orders', array( 'status' => $status ), "oid = ${oid}");
@@ -112,22 +130,6 @@ if ($oid)
 			);
 			if ($form->comment) $arr['comment'] = str_replace("\n", "\\n", $form->comment);
 			$dbh->insert('certificates_history', $arr);
-		}
-		elseif ($certificate = $form->cert)
-		{
-			if ($dbh->update('certificates_orders', array( 'certificate' => $certificate ), "oid=${oid}"))
-			{
-				$dbh->insert('certificates_history', array(
-					'oid' => $oid,
-					'action' => 'Certificate updated',
-					'author_uid' => $_SESSION['auth']['uid']
-				)) or error_log("Failed to insert comment: ".$dbh->log_error());
-				print <<<MSG
-				<div class="alert alert-success">
-				 Certificate successfully updated!
-				</div>
-MSG;
-			}
 		}
 		elseif ($comment = $form->comment)
 		{
@@ -148,9 +150,33 @@ MSG;
 			}
 		}
 	}
+	if ($form->changes)
+	{
+		if ($dbh->update('certificates_orders', array(
+			"provider_name" => $form->provider_name,
+			"provider_oid" => $form->provider_oid,
+		), "oid=${oid}"))
+		{
+			print <<<ALERT
+			<div class="alert alert-success">
+			 Modifications saved.
+			</div>
+ALERT;
+		}
+		else
+		{
+			print <<<ALERT
+			<div class="alert alert-danger">
+			 Failed to save modifications.<br />
+			 Please contact your System Administrator.
+			</div>
+ALERT;
+		}
+	}
 
 	# Load CSR
-	list($csr, $certificate, $status, $creation, $uid) = $dbh->select('certificates_orders', 'csr,certificate,status,creation,author_uid', "oid = ${oid}");
+	list($csid, $certificate, $status, $creation, $uid, $provider, $poid) = $dbh->select('certificates_orders', 'csid,certificate,status,creation,author_uid,provider_name,provider_oid', "oid = ${oid}");
+	list($csr) = $dbh->select('certificates_csr', 'csr', "csid=$csid");
 	$infos = openssl_csr_get_subject($csr);
 	$csr = str_replace("\n", "\\n", $csr);
 
@@ -166,8 +192,8 @@ MSG;
 		case 'csr_creation':
 			$options[]= <<<DATA
 			<div class="input-group group-left input-group-line">
-			 <a class="btn btn-default btn-sm" href="javascript:action('csr_sent');">CSR sent to CA</a>
-			 <a class="btn btn-default btn-sm" href="javascript:action('csr_canceled');">Cancel order</a>
+			 <a class="btn btn-default btn-sm" href="javascript:action('csr_sent');"><span class="fa fa-share"></span> CSR sent to CA</a>
+			 <a class="btn btn-default btn-sm" href="javascript:action('csr_canceled');"><span class="fa fa-ban"></span> Cancel order</a>
 			</div>
 DATA;
 			break;
@@ -179,7 +205,7 @@ DATA;
 			 <a class="btn btn-default btn-sm" href="javascript:action('ca_answer_ko');">Order <strong class="text-danger">refused</strong> by CA</a>
 			</div>
 			<div class="input-group group-left input-group-line">
-			 <a class="btn btn-default btn-sm" href="javascript:action('csr_canceled');">Cancel order</a>
+			 <a class="btn btn-default btn-sm" href="javascript:action('csr_canceled');"><span class="fa fa-ban"></span> Cancel order</a>
 			</div>
 DATA;
 			break;
@@ -194,7 +220,7 @@ DATA;
 		case 'ca_answer_ko':
 			$options[]= <<<DATA
 			<div class="input-group group-left input-group-line">
-			 <a class="btn btn-default btn-sm" href="javascript:action('csr_creation');">Reopen order</a>
+			 <a class="btn btn-default btn-sm" href="javascript:action('csr_creation');"><span class="fa fa-repeat"></span> Reopen order</a>
 			</div>
 DATA;
 			break;
@@ -213,7 +239,7 @@ DATA;
 	print <<<PAGE
 	<div class="card">
 	 <h2 class="title">Certificate order #${oid} for certificate &quot;<em>$cert->name</em>&quot;</h2>
-	 <p><a href="/index.php/${path[0]}/orders/${cid}">&laquo; Back to the certificate orders</a></p>
+	 <p><a href="/index.php/${path[0]}/${cid}/orders">&laquo; Back to the certificate orders</a></p>
 	 <table class="table table-condensed">
 PAGE;
 	foreach ($infos as $item=>$value)
@@ -227,13 +253,30 @@ ROW;
 	}
 	print <<<PAGE
 	 </table>
-	 <p>
-	  ${options}
-	  <div class="input-group input-group-line">
-	   <a class="btn btn-default btn-sm" href="javascript:comment();">Comment</a>
-	   <a class="btn btn-default btn-sm" href="javascript:display_csr('${csr}');">View CSR</a>
+	 <form method="post" action="${npath}">
+
+	  <div class="input-group">
+	   <div class="label">Provider name:</div>
+	   <input type="text" name="provider_name" value="${provider}" placeholder="RapidSSL, GlobalTrust, SSL247,..." class="form-control" />
 	  </div>
-	 </p>
+	  <div class="input-group">
+	   <div class="label">Provider order ID:</div>
+	   <input type="text" name="provider_oid" value="${poid}" class="form-control" />
+	  </div>
+	
+	  <p>
+	   <input type="hidden" name="changes" value="1" />
+	   <div class="input-group input-group-line group-left">
+	    <input type="submit" value="Save changes" class="btn btn-default btn-sm" />
+	   </div>
+	   ${options}
+	   <div class="input-group input-group-line">
+	    <a class="btn btn-default btn-sm" href="javascript:comment();"><span class="fa fa-comment-o"></span> Comment</a>
+	    <a class="btn btn-default btn-sm" href="javascript:clip_modal('${csr}');"><span class="fa fa-eye"></span> View CSR</a>
+	   </div>
+	  </p>
+
+	 </form>
 PAGE;
 
 
@@ -356,9 +399,9 @@ ROW;
 		if (!ref) ref = '';
 		$.modal({
 			'content': $.heredoc(function(){/*TAG
-			<form method="post" action="/index.php/${path[0]}/${path[1]}/${cid}/edit/${oid}">
+			<form method="post" action="/index.php/${path[0]}/${cid}/orders/${oid}/edit">
 			 <input type="hidden" name="ref" value="{:ref}" />
-			 <p><textarea name="comment" cols="100" rows="15" class="form-control">{:content}</textarea></p>
+			 <p><textarea placeholder="Add your comment here" required="required" name="comment" cols="100" rows="7" class="form-control">{:content}</textarea></p>
 			 <p class="text-right"><input type="submit" value="Save comment" class="btn btn-success" /> <span class="btn btn-default" data-role="close">Cancel</span></p>
 			</form>
 			TAG*/},{ 'content': content, 'ref': ref })
@@ -367,14 +410,27 @@ ROW;
 
 	function action(newStatus)
 	{
-		if (newStatus!='csr_sent')
+		if (newStatus!='csr_sent' && newStatus!='ca_answer_ok')
 		{
 			$.modal({
 				'content': $.heredoc(function(){/*TAG
-				<form method="post" action="/index.php/${path[0]}/${path[1]}/${cid}/edit/${oid}">
+				<form method="post" action="/index.php/${path[0]}/${cid}/orders/${oid}/edit">
 				 <input type="hidden" name="status" value="{:status}" />
-				 <p><textarea name="comment" cols="100" rows="15" class="form-control">{:content}</textarea></p>
-				 <p class="text-right"><input type="submit" value="Save comment" class="btn btn-success" /> <span class="btn btn-default" data-role="close">Cancel</span></p>
+				 <p><textarea placeholder="Add comment on this action (not required)" name="comment" cols="100" rows="7" class="form-control">{:content}</textarea></p>
+				 <p class="text-right"><input type="submit" value="Confirm new status" class="btn btn-success" /> <span class="btn btn-default" data-role="close">Cancel</span></p>
+				</form>
+				TAG*/}, { 'status': newStatus })
+			});
+		}
+		else if (newStatus=='ca_answer_ok')
+		{
+			$.modal({
+				'content': $.heredoc(function(){/*TAG
+				<form method="post" action="/index.php/${path[0]}/${cid}/orders/${oid}/edit">
+				 <input type="hidden" name="status" value="{:status}" />
+				 <p><textarea placeholder="Signed Certificate" required="required" name="certificate" cols="100" rows="7" class="form-control">{:content}</textarea></p>
+				 <p><textarea placeholder="Intermediate Certificate" required="required" name="intermediate" cols="100" rows="4" class="form-control">{:content}</textarea></p>
+				 <p class="text-right"><input type="submit" value="Confirm new status" class="btn btn-success" /> <span class="btn btn-default" data-role="close">Cancel</span></p>
 				</form>
 				TAG*/}, { 'status': newStatus })
 			});
@@ -385,31 +441,6 @@ ROW;
 		}
 	}
 
-	function display_csr(csr)
-	{
-		$.modal({ 'content': $.heredoc(function(){/*TAG
-		 <p><pre>{:csr}</pre></p>
-		 <p class="text-right">
-		  <span class="btn btn-primary" onclick="javascript:copy_to_clipboard(this);">Copy to clipboard</span>
-		  <span class="btn btn-default" data-role="close">Close</span>
-		 </p>
-		TAG*/},{ 'csr':csr }) });
-	}
-
-
-	function copy_to_clipboard(e)
-	{
-		var container = $(e).parents('.wmodal-content').find('pre');
-		var selection = window.getSelection();
-		var range = document.createRange();
-		range.selectNodeContents(container[0]);
-		selection.removeAllRanges();
-		selection.addRange(range);
-		document.execCommand('copy');
-		alert('Data copied to your clipboard.');
-	}
-
-
 	function save_certificate(cert)
 	{
 		if (!cert) cert = '';
@@ -417,7 +448,7 @@ ROW;
 			'content': $.heredoc(function(){/*TAG
 			<form method="post" action="/index.php/${path[0]}/${path[1]}/${cid}/edit/${oid}">
 			 <p>You can store here the definitive SSL certificate.</p>
-			 <p><textarea name="cert" cols="100" rows="15" class="form-control">{:cert}</textarea></p>
+			 <p><textarea name="cert" cols="100" rows="7" class="form-control">{:cert}</textarea></p>
 			 <p class="text-right"><input type="submit" value="Save certificate" class="btn btn-success" /> <span class="btn btn-default" data-role="close">Cancel</span></p>
 			</form>
 			TAG*/}, { 'cert': cert })
@@ -431,26 +462,59 @@ PAGE;
 else
 {
 
-	# 
+	# Get available CSR
+	$locked = 'disabled="disabled"';
+	$query = $dbh->query("SELECT csid FROM certificates_orders WHERE cid=${cid} ORDER BY creation DESC LIMIT 1;");
+	list($lu) = $query->fetch();
+	$query->closeCursor();
+	$csrs = array();
+	if ($query = $dbh->query("SELECT csid,csr,creation FROM certificates_csr WHERE cid=${cid} ORDER BY creation DESC;"))
+	{
+		$i = 0;
+		while (list($csid, $csr, $creation) = $query->fetch())
+		{
+			$tmp = openssl_csr_get_subject($csr);
+			$str = '';
+			if ($i==0) $str = 'Latest created - ';
+			if ($lu==$csid) $str = 'Latest used - ';
+			foreach ($tmp as $a=>$b)
+			{
+				$str.= "/${a}=${b}";
+			}
+			$csrs[$csid] = $str;
+			$i++;
+			$locked = '';
+		}
+		$query->closeCursor();
+	}
+
+	# Print form
 	print <<<PAGE
 	<div class="card">
-	 <h2 class="title">New certificate order (CSR) for certificate &quot;<em>$cert->name</em>&quot;</h2>
-	 <p><a href="/index.php/${path[0]}/orders/${cid}">&laquo; Back to the certificate orders</a></p>
+	 <h2 class="title">New certificate order (creation/renewal) for certificate &quot;<em>$cert->name</em>&quot;</h2>
+	 <p><a href="/index.php/${path[0]}/${cid}/orders">&laquo; Back to the certificate orders list</a></p>
 	 <form method="post" action="">
-	  <input type="hidden" name="csr" value="1" />
+	  <input type="hidden" name="order" value="1" />
 	  <div class="input-group">
 	   <div class="label">Certificates provider:</div>
-	   <input type="text" name="provider_name" class="form-control" />
+	   <input type="text" name="provider_name" class="form-control" placeholder="RapidSSL, GlobalSign, SSL247,... (not required)" />
 	  </div>
 	  <div class="input-group">
-	   <div class="label">e-Mail address:</div>
-	   <input type="email" name="email" class="form-control" />
+	   <div class="label">Provider order ID:</div>
+	   <input type="text" name="provider_oid" class="form-control" placeholder="(not required)" />
 	  </div>
 	  <div class="input-group">
-	   <div class="label">Duration (in days):</div>
-	   <input type="number" name="duration" class="form-control" min="1" max="99999" step="1" value="365" required="required" />
+	   <div class="label">Certificate Signing Request:</div>
+	   <select name="csid" class="form-control">
+PAGE;
+	foreach ($csrs as $csid=>$csr)
+	{
+		print "<option value=\"${csid}\">${csr}</option>";
+	}
+	print <<<PAGE
+	   </select>
 	  </div>
-	  <p class="text-center"><input type="submit" value="Create new Certificate Signing Request" class="btn btn-success" /></p>
+	  <p class="text-center"><input type="submit" value="Create new order" class="btn btn-success" ${locked} /></p>
 	 </form>
 	</div>
 PAGE;
