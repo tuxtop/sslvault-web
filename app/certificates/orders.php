@@ -6,13 +6,12 @@
 
 
 # Get certificate to manage
-$cid = isset($path[2]) and preg_match('/^\d+$/', $path[2]) ? intval($path[2]) : null;
-$action = isset($path[3]) ? $path[3] : 'list';
+$action = isset($path[4]) ? $path[4] : 'list';
 if ($cid===null) $action = ':unknown';
 
 
 # Prepare path to file
-$file = $_SERVER['DOCUMENT_ROOT']."/app/${path[0]}/${path[1]}-${action}.php";
+$file = $_SERVER['DOCUMENT_ROOT']."/app/${path[0]}/orders-${action}.php";
 if (!file_exists($file)) $action = ':notfound';
 
 
