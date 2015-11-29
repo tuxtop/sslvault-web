@@ -50,7 +50,7 @@ class SSLCert
 			),
 			'csr_creation' => array(
 				'code'	=> 'csr_creation',
-				'text'	=> 'CSR created (to send)',
+				'text'	=> 'Order created (to send)',
 				'label'	=> 'primary'
 			),
 			'soon_expiration' => array(
@@ -108,6 +108,7 @@ class SSLCert
 			}
 			$query->closeCursor();
 		}
+		$this->certFields['st'] = $this->certFields['s'];
 
 		# Check if in order status
 		$request = <<<REQ
@@ -191,7 +192,25 @@ REQ;
 	 */
 	public function __get($varname)
 	{
+		$varname = strtolower($varname);
 		return isset($this->certFields[$varname]) ? $this->certFields[$varname] : null;
+	}
+
+
+	/**
+	 * public toString
+	 * Return certificate in a string format (without expiration)
+	 *
+	 * @return string Return the stringify of the certificate
+	 */
+	public function toString()
+	{
+		$str = '';
+		foreach (explode(' ', 'CN O OU L ST C') as $l)
+		{
+			$str.= "/${l}=".$this->$l;
+		}
+		return $str;
 	}
 
 }
